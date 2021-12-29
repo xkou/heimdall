@@ -98,8 +98,6 @@ impl FileObserver {
 
     pub fn start(self, tx: Sender<Hit>, read_from_start: bool, sleep_time: u64) -> Result<bool, String> {
 
-        //let (tx, rx) = mpsc::channel();
-
         let mut size: u64 = match fs::metadata(&self.file_path) {
             Ok(meta) => meta.len(),
             Err(why) => {
@@ -137,18 +135,19 @@ impl FileObserver {
                     }
                 };
 
-                if current_size < size {
-                    let _ = match reader.seek(SeekFrom::End(0)) {
-                        Ok(val) => val,
-                        Err(_) => continue
-                    };
-                    size = current_size;
-                }
-                else if current_size == size{
+                if current_size == size{
                     let ten_millis = time::Duration::from_millis(1000);
                     thread::sleep(ten_millis);
                     continue;
                 }
+                else if current_size < size {
+                    size = current_size;
+                    let _ = match reader.seek(SeekFrom::End(0)) {
+                        Ok(val) => val,
+                        Err(_) => continue
+                    };
+                }
+
                 'lbl_continue: while match reader.read_line(&mut log_line) {
                     Ok(val) => val,
                     Err(_) => {
@@ -186,7 +185,9 @@ fn get_updated_interval_hits(ip_statistics: &mut FnvLruCache<Ipv4Addr, HourStat>
 
     if let Some(hour_stat) = ip_statistics.get_mut(&hit.ip) {
         hour_stat.add(hit.hour, hit.minute, 1);
-        return hour_stat.sum(hit.hour, hit.minute, limit_minutes);
+        let n = hour_stat.sum(hit.hour, hit.minute, limit_minutes);
+        info!("nnn {} {}", n, hit.ip);
+        return n;
     }
 
     ip_statistics.insert(hit.ip, HourStat::new(hit.hour, hit.minute, 1));
@@ -231,7 +232,7 @@ fn check_patterns(regex_set: &RegexSet, patterns: &Vec<LogPattern>, line: &str) 
                 Some(number) => number,
                 None => return None
             };
-            info!("Starting observer {}.", ip);
+            info!("Observer {}", ip);
             return Some(PatternResult{hour: hour, minute: minute, ip: ip});
 
         }

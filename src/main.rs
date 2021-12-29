@@ -108,7 +108,7 @@ fn dojail(entries: &mut Vec<JailEntry>, jail_counter: &mut HashMap<Ipv4Addr, u32
 
     if found_existing_item {
         entries.sort_by(|a, b| a.time.cmp(&b.time));
-        return false;
+     //   return false;
     }
 
     let jail_count = jail_counter.entry(hit.ip).or_insert(0);
