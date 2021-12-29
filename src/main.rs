@@ -148,8 +148,8 @@ fn execute_process(command: &str, ip: &Ipv4Addr, simulate: bool) -> bool {
 
     if !arguments_string.is_empty() {
 
-        // let arguments : Vec<String> = arguments_string.split_whitespace().map( |s| String::from_str(s).unwrap() ).collect();
-        let arguments : Vec<String> = env::args().collect();
+        let arguments : Vec<String> = arguments_string.split_whitespace().map( |s| String::from_str(s).unwrap() ).collect();
+        // let arguments : Vec<String> = env::args().collect();
         status = match Command::new(&program_name)
             .args(&arguments)
             .status() {
@@ -206,7 +206,7 @@ fn main() {
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
+        Err(f) => { panic!("{}", f.to_string()) }
     };
 
     if matches.opt_present("h") {

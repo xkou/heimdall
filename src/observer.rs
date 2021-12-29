@@ -5,7 +5,7 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::fs;
 use std::fs::File;
-use std::thread;
+use std::{thread, time};
 use std::sync::mpsc::Sender;
 use std::time::Duration;
 use std::net::Ipv4Addr;
@@ -102,7 +102,10 @@ impl FileObserver {
 
         let mut size: u64 = match fs::metadata(&self.file_path) {
             Ok(meta) => meta.len(),
-            Err(why) => return Err(format!("Could not read file: {}: {}", self.file_path, why.to_string()))
+            Err(why) => {
+                warn!("Could not read file: {}: {}", self.file_path, why.to_string());
+                return Ok(true);
+            }
         };
 
         info!("observing file: {}", self.file_path);
@@ -133,6 +136,7 @@ impl FileObserver {
                         continue
                     }
                 };
+
                 if current_size < size {
                     let _ = match reader.seek(SeekFrom::End(0)) {
                         Ok(val) => val,
@@ -140,9 +144,16 @@ impl FileObserver {
                     };
                     size = current_size;
                 }
+                else if current_size == size{
+                    let ten_millis = time::Duration::from_millis(1000);
+                    thread::sleep(ten_millis);
+                    continue;
+                }
                 'lbl_continue: while match reader.read_line(&mut log_line) {
                     Ok(val) => val,
-                    Err(_) => continue 'lbl_continue
+                    Err(_) => {
+                        continue 'lbl_continue
+                    }
                 } > 0 {
                     if let Some(hit) = check_patterns(&self.pattern_set, &self.patterns, &log_line) {
                         /*
@@ -220,7 +231,7 @@ fn check_patterns(regex_set: &RegexSet, patterns: &Vec<LogPattern>, line: &str) 
                 Some(number) => number,
                 None => return None
             };
-
+            info!("Starting observer {}.", ip);
             return Some(PatternResult{hour: hour, minute: minute, ip: ip});
 
         }
